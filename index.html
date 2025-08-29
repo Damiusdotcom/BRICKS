@@ -1,107 +1,300 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BRICKS Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
-    #chart-container { width: 70%; margin: auto; }
-    table { 
-      width: 100%; border-collapse: collapse; margin-top: 30px; background: #fff;
-      box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+    :root {
+      --brand: #2c3e50;
+      --brand-2: #34495e;
+      --accent: #2980b9;
+      --bg: #f4f6f9;
     }
-    th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
-    th { background: #007bff; color: #fff; }
-    tr:nth-child(even) { background: #f9f9f9; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #333;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+    header {
+      background: var(--brand);
+      color: #fff;
+      text-align: center;
+      padding: 14px 16px;
+      font-size: 22px;
+      letter-spacing: 1px;
+    }
+    .container {
+      display: grid;
+      grid-template-rows: 260px 1fr; /* <-- make the chart smaller here */
+      gap: 10px;
+      height: calc(100vh - 60px);
+      padding: 10px 16px 16px;
+    }
+    .chart-section {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 10px;
+      padding: 8px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Make canvas fill the fixed-height container */
+    #completionChart {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    .table-section {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 10px;
+      overflow: auto;
+      padding: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px; /* allow horizontal scroll if needed */
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--brand-2);
+      color: #fff;
+      padding: 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+    tbody td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    tbody tr:hover { background: #fafafa; }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .container { grid-template-rows: 220px 1fr; }
+      thead th, tbody td { padding: 8px; font-size: 13px; }
+    }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center;">BRICKS Dashboard</h1>
+  <header>BRICKS — Project Overview</header>
 
-  <!-- Graph -->
-  <div id="chart-container">
-    <canvas id="completionChart"></canvas>
+  <div class="container">
+    <!-- Top: compact chart -->
+    <div class="chart-section">
+      <canvas id="completionChart" aria-label="Project completion chart" role="img"></canvas>
+    </div>
+
+    <!-- Bottom: data table -->
+    <div class="table-section">
+      <table>
+        <thead>
+          <tr>
+            <th>PR #</th>
+            <th>PROJECT CATEGORY</th>
+            <th>PROJECT TITLE</th>
+            <th>CONTRACTOR</th>
+            <th>STATUS</th>
+            <th>PROJECT COMPLETION (%)</th>
+            <th>PROJECT DURATION</th>
+            <th>START DATE</th>
+            <th>END DATE</th>
+            <th>ACTUAL START DATE</th>
+            <th>ACTUAL END DATE</th>
+            <th>REMAINING DAYS</th>
+          </tr>
+        </thead>
+        <tbody id="projects-body">
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Table -->
-  <table id="projectTable">
-    <thead>
-      <tr>
-        <th>PR #</th>
-        <th>PROJECT CATEGORY</th>
-        <th>PROJECT TITLE</th>
-        <th>CONTRACTOR</th>
-        <th>STATUS</th>
-        <th>PROJECT COMPLETION (%)</th>
-        <th>PROJECT DURATION</th>
-        <th>START DATE</th>
-        <th>END DATE</th>
-        <th>ACTUAL START DATE</th>
-        <th>ACTUAL END DATE</th>
-        <th>REMAINING DAYS</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
   <script>
-    // Replace with your Google Sheet published CSV link
-    const sheetURL = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/gviz/tq?tqx=out:csv&sheet=Sheet1";
+    // Dummy dataset (10 projects)
+    const projects = [
+      {
+        pr: "2025-001", category: "MOIST",
+        title: "Metro Heights Condominium",
+        contractor: "ABC Builders", status: "Ongoing",
+        completion: 72,
+        start: "2024-03-15", end: "2026-09-30",
+        actualStart: "2024-03-20", actualEnd: ""
+      },
+      {
+        pr: "2025-002", category: "MOSES",
+        title: "Greenfield IT Park Tower",
+        contractor: "XYZ Contractors", status: "Ongoing",
+        completion: 58,
+        start: "2023-11-01", end: "2025-05-15",
+        actualStart: "2023-11-05", actualEnd: ""
+      },
+      {
+        pr: "2025-003", category: "MOSES",
+        title: "Harborview Bridge Expansion",
+        contractor: "BuildRight Corp.", status: "Ongoing",
+        completion: 84,
+        start: "2022-08-10", end: "2025-12-15",
+        actualStart: "2022-08-12", actualEnd: ""
+      },
+      {
+        pr: "2025-004", category: "MOIST",
+        title: "Sunrise Mall",
+        contractor: "PrimeConstruct", status: "Ongoing",
+        completion: 93,
+        start: "2023-04-20", end: "2025-12-31",
+        actualStart: "2023-04-24", actualEnd: ""
+      },
+      {
+        pr: "2025-005", category: "MOSES",
+        title: "Laguna Eco-Industrial Park",
+        contractor: "EcoDev Co.", status: "Completed",
+        completion: 100,
+        start: "2022-05-05", end: "2024-12-15",
+        actualStart: "2022-05-10", actualEnd: "2024-12-12"
+      },
+      {
+        pr: "2025-006", category: "MOIST",
+        title: "Skyway Extension Project",
+        contractor: "HighwayWorks", status: "Ongoing",
+        completion: 61,
+        start: "2023-01-12", end: "2025-11-30",
+        actualStart: "2023-01-15", actualEnd: ""
+      },
+      {
+        pr: "2025-007", category: "MOSES",
+        title: "Riverside Residences",
+        contractor: "HomeBuild Inc.", status: "Ongoing",
+        completion: 32,
+        start: "2024-06-01", end: "2027-01-30",
+        actualStart: "2024-06-05", actualEnd: ""
+      },
+      {
+        pr: "2025-008", category: "MOSES",
+        title: "Coastal Flood Protection Wall",
+        contractor: "SafeShore Ltd.", status: "Ongoing",
+        completion: 67,
+        start: "2022-09-18", end: "2025-06-15",
+        actualStart: "2022-09-20", actualEnd: ""
+      },
+      {
+        pr: "2025-009", category: "MOIST",
+        title: "Central Business Hotel",
+        contractor: "CityHotels Dev", status: "Ongoing",
+        completion: 76,
+        start: "2023-07-25", end: "2026-03-10",
+        actualStart: "2023-07-28", actualEnd: ""
+      },
+      {
+        pr: "2025-010", category: "MOSES",
+        title: "Mindanao Agro Processing Hub",
+        contractor: "AgroTech Builders", status: "Ongoing",
+        completion: 45,
+        start: "2024-01-10", end: "2026-08-20",
+        actualStart: "2024-01-12", actualEnd: ""
+      }
+    ];
 
-    async function loadData() {
-      const response = await fetch(sheetURL);
-      const csvText = await response.text();
+    // Helpers
+    const toDate = s => s ? new Date(s + "T00:00:00") : null;
+    const fmt = s => s || "-";
 
-      // Parse CSV
-      const rows = csvText.trim().split("\n").map(r => r.split(","));
-      const headers = rows[0];
-      const data = rows.slice(1);
-
-      // Fill Table
-      const tbody = document.querySelector("#projectTable tbody");
-      tbody.innerHTML = "";
-      data.forEach(row => {
-        const tr = document.createElement("tr");
-        row.forEach((cell, i) => {
-          let td = document.createElement("td");
-          if (headers[i].toLowerCase().includes("project title")) {
-            // Make Project Title clickable
-            td.innerHTML = `<a href="project_${row[0]}.html">${cell}</a>`;
-          } else {
-            td.textContent = cell;
-          }
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-
-      // Chart Data (using Project Name + Completion %)
-      const labels = data.map(r => r[2]);  // Project Title
-      const completion = data.map(r => parseInt(r[5] || 0)); // Project Completion %
-
-      const ctx = document.getElementById("completionChart").getContext("2d");
-      new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: "Completion %",
-            data: completion,
-            backgroundColor: "rgba(0,123,255,0.7)"
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true, max: 100 }
-          }
-        }
-      });
+    function daysBetween(a, b) {
+      const MS = 86400000;
+      return Math.round((b - a) / MS);
     }
 
-    loadData();
+    function projectDurationDays(p) {
+      const s = toDate(p.start);
+      const e = toDate(p.end);
+      if (!s || !e) return "-";
+      return `${daysBetween(s, e)} days`;
+    }
+
+    function remainingDays(p) {
+      if (p.status.toLowerCase() === "completed" || p.actualEnd) return 0;
+      const today = new Date(); // client-side today
+      const e = toDate(p.end);
+      if (!e) return "-";
+      const rem = Math.ceil((e - today) / 86400000);
+      return Math.max(0, rem);
+    }
+
+    // Populate table
+    const tbody = document.getElementById("projects-body");
+    projects.forEach((p) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p.pr}</td>
+        <td>${p.category}</td>
+        <td><a href="project-${p.pr}.html" title="View ${p.title}">${p.title}</a></td>
+        <td>${p.contractor}</td>
+        <td>${p.status}</td>
+        <td>${p.completion}%</td>
+        <td>${projectDurationDays(p)}</td>
+        <td>${fmt(p.start)}</td>
+        <td>${fmt(p.end)}</td>
+        <td>${fmt(p.actualStart)}</td>
+        <td>${fmt(p.actualEnd)}</td>
+        <td>${remainingDays(p)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Build chart from the same data
+    const labels = projects.map(p => p.title);
+    const values = projects.map(p => p.completion);
+
+    const ctx = document.getElementById("completionChart").getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Project Completion (%)",
+          data: values,
+          // simple single color; Chart.js will handle hover shades
+          backgroundColor: "#4aa3df"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false, // important for fixed-height container
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.parsed.y}%`
+            }
+          }
+        },
+        layout: { padding: { top: 4, right: 8, bottom: 0, left: 8 } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            title: { display: true, text: "Completion (%)" },
+            ticks: { stepSize: 20 }
+          },
+          x: {
+            title: { display: true, text: "Project Name" },
+            ticks: { maxRotation: 30, minRotation: 0, autoSkip: true }
+          }
+        }
+      }
+    });
   </script>
 </body>
 </html>
